@@ -1,3 +1,4 @@
+//test comment
 package org.ggp.base.apps.kiosk;
 
 import java.awt.Dimension;
