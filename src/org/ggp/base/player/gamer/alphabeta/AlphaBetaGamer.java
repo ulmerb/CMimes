@@ -1,4 +1,4 @@
-package org.ggp.base.player.gamer.minimax;
+package org.ggp.base.player.gamer.alphabeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,10 +20,10 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
-public final class MinimaxGamer extends StateMachineGamer{
+public final class AlphaBetaGamer extends StateMachineGamer{
 	@Override
 	public String getName() {
-		return "MinimaxPlayer";
+		return "AlphaBetaPlayer";
 	}
 
 	@Override
@@ -46,7 +46,7 @@ public final class MinimaxGamer extends StateMachineGamer{
 			Move action = actions.get(0);
 			int score = 0;
 			for (int i = 0; i < actions.size(); i++){
-				int result = minscore(role, actions.get(i), state);
+				int result = minscore(role, actions.get(i), state, 0, 100);
 				if (result == 100) return actions.get(i);
 				if (result > score){
 					score = result;
@@ -61,7 +61,7 @@ public final class MinimaxGamer extends StateMachineGamer{
 		return null;
 	}
 
-	public int minscore(Role role, Move move, MachineState state){
+	public int minscore(Role role, Move move, MachineState state, int alpha, int beta){
 		try {
 			Map<Role, Integer> roles = getStateMachine().getRoleIndices();
 			int ourRole = roles.get(role);
@@ -71,7 +71,6 @@ public final class MinimaxGamer extends StateMachineGamer{
 			} else {
 				opponent = getStateMachine().getRoles().get(1);
 			}
-			int score = 100;
 			List<Move> moves = getStateMachine().getLegalMoves(state, opponent);
 			for (int i = 0; i < moves.size(); i++){
 				List<Move> jointMove = new ArrayList<Move>();
@@ -83,10 +82,11 @@ public final class MinimaxGamer extends StateMachineGamer{
 					jointMove.add(1, move);
 				}
 				MachineState nextState = getStateMachine().getNextState(state, jointMove);
-				int result = maxscore(role, nextState);
-				if (result < score) score = result;
+				int result = maxscore(role, nextState, alpha, beta);
+				if (beta > result) beta = result;
+				if (beta <= alpha) return alpha;
 			}
-			return score;
+			return beta;
 		} catch (MoveDefinitionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -97,19 +97,17 @@ public final class MinimaxGamer extends StateMachineGamer{
 		return 0;
 	}
 
-	public int maxscore(Role role, MachineState state){
+	public int maxscore(Role role, MachineState state, int alpha, int beta){
 			try {
 				if (getStateMachine().isTerminal(state)) return getStateMachine().getGoal(state, role);
 				List<Move> actions = getStateMachine().getLegalMoves(state, role);
-				int score = 0;
+				//int score = 0;
 				for (int i = 0; i < actions.size(); i++){
-					int result = minscore(role, actions.get(i), state);
-					if (result == 100) return 100;
-					if (result > score){
-						score = result;
-					}
+					int result = minscore(role, actions.get(i), state, alpha, beta);
+					if (result > alpha) alpha = result;
+					if (alpha >= beta) return beta;
 				}
-				return score;
+				return alpha;
 			} catch (GoalDefinitionException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

@@ -1,7 +1,6 @@
 package org.ggp.base.player.gamer.deliberation;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.ggp.base.apps.player.detail.DetailPanel;
@@ -21,66 +20,24 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 public class DeliberationGamer extends StateMachineGamer{
+	List<Move> GamePath = new ArrayList<Move>();
+	int counter = 0;
+
 	@Override
 	public String getName() {
-		return "Random";
+		return "SinglePlayerGame";
 	}
 
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
 	{
+		System.out.println("Reached move");
 		long start = System.currentTimeMillis();
-
 		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
-		Move selection = bestMove(getRole(), getCurrentState(), moves);
-
+		Move selection = GamePath.get(counter++);
 		long stop = System.currentTimeMillis();
-
 		notifyObservers(new GamerSelectedMoveEvent(moves, selection, stop - start));
 		return selection;
-	}
-
-	public Move bestMove(Role role, MachineState state, List<Move> actions) {
-		Move action = actions.get(0);
-		int score = 0;
-		try {
-			for(int i = 0; i < actions.size(); i++) {
-				int result;
-				result = maxScore(role, getStateMachine().getNextState(state, new ArrayList<Move>(Arrays.asList(action))));
-
-				if(result == 100)
-					return actions.get(i);
-				if(result > score) {
-					score = result;
-					action = actions.get(i);
-				}
-			}
-				//return action;
-			}
-		catch (TransitionDefinitionException e) {
-		// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return action;
-	}
-
-	public int maxScore(Role role, MachineState state) {
-		int score = 0;
-		try {
-			if (getStateMachine().isTerminal(state))
-				return getStateMachine().getGoal(state, role);
-
-			List<Move> actions = getStateMachine().getLegalMoves(getCurrentState(), getRole());
-			for (int i=0; i<actions.size(); i++) {
-				int result = maxScore(role, getStateMachine().getNextState(state, new ArrayList<Move>(Arrays.asList(actions.get(i)))));
-				if (result > score)
-					score = result;
-			}
-
-		} catch(TransitionDefinitionException e) {
-			e.printStackTrace();
-		}
-		return score;
 	}
 
 
@@ -90,28 +47,66 @@ public class DeliberationGamer extends StateMachineGamer{
 	}
 
 	@Override
-	public void preview(Game g, long timeout) throws GamePreviewException {
-		// Random gamer does no game previewing.
+	public void stateMachineMetaGame(long timeout)
+			throws TransitionDefinitionException, MoveDefinitionException,
+			GoalDefinitionException {
+		GamePath = new ArrayList<Move>();
+		findWinningPath(getRole(), getCurrentState());
 	}
 
-	@Override
-	public void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
-	{
-		// Random gamer does no metagaming at the beginning of the match.
+	public boolean findWinningPath(Role role, MachineState state){
+			try {
+				if (getStateMachine().isTerminal(state) && getStateMachine().getGoal(state, role) == 100) return true;
+				if (getStateMachine().isTerminal(state)) return false;
+				List<Move> actions = getStateMachine().getLegalMoves(state, role);
+				for (int i = 0; i < actions.size(); i++){
+					List<Move> moves = new ArrayList<Move>();
+					moves.add(actions.get(i));
+					if (findWinningPath(role, getStateMachine().getNextState(state, moves))){
+						GamePath.add(0, actions.get(i));
+						System.out.println(GamePath.size());
+						return true;
+					}
+				}
+				return false;
+			} catch (GoalDefinitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (MoveDefinitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (TransitionDefinitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		return false;
+
 	}
 
-	@Override
-	public void stateMachineStop() {
-		// Random gamer does no special cleanup when the match ends normally.
-	}
 
-	@Override
-	public void stateMachineAbort() {
-		// Random gamer does no special cleanup when the match ends abruptly.
-	}
 
 	@Override
 	public DetailPanel getDetailPanel() {
 		return new SimpleDetailPanel();
+	}
+
+
+	@Override
+	public void stateMachineStop() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void stateMachineAbort() {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void preview(Game g, long timeout) throws GamePreviewException {
+		// TODO Auto-generated method stub
+
 	}
 }
